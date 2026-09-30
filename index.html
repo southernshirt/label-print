@@ -1,0 +1,753 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sample Label Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@400;700&family=Oswald:wght@400;700&family=Roboto+Condensed:wght@400;700&family=Roboto+Mono:wght@400;700&family=Libre+Baskerville:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<style>
+:root{
+  --bg:#eef1f2; --panel:#ffffff; --ink:#15201c; --muted:#5b6862; --line:#d6dcdb; --field:#f6f8f8;
+  --accent:#1f5a47; --accent-ink:#ffffff; --accent-soft:#dcebe5; --desk:#dfe4e6; --warn:#a3371a;
+  --ui:Inter, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#101513;--panel:#1a211e;--ink:#e6ece9;--muted:#98a59f;--line:#2f3a35;--field:#141a17;--accent:#7cc0a6;--accent-ink:#0c1411;--accent-soft:#223a31;--desk:#0c100e;--warn:#f28b6b}}
+:root[data-theme="dark"]{--bg:#101513;--panel:#1a211e;--ink:#e6ece9;--muted:#98a59f;--line:#2f3a35;--field:#141a17;--accent:#7cc0a6;--accent-ink:#0c1411;--accent-soft:#223a31;--desk:#0c100e;--warn:#f28b6b}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 var(--ui)}
+button,select,input{font:inherit;color:inherit}
+button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.is-hidden{display:none!important}
+
+/* top bar */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--panel);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:12px;padding:10px 18px;flex-wrap:wrap}
+.brand{display:flex;flex-direction:column;margin-right:auto;min-width:180px}
+.brand b{font-size:16px;letter-spacing:-.01em}
+.brand span{color:var(--muted);font-size:12px}
+.tplwrap{display:flex;align-items:center;gap:8px}
+.tplwrap label{color:var(--muted);font-size:12px}
+.sel,.inp{padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:var(--field);min-width:0}
+.btn{padding:8px 14px;border:1px solid var(--line);border-radius:7px;background:var(--panel);cursor:pointer;font-weight:600;white-space:nowrap}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn:disabled{opacity:.45;cursor:default}
+
+/* layout */
+.app{display:grid;grid-template-columns:380px 1fr;min-height:calc(100vh - 62px)}
+@media (max-width:860px){.app{grid-template-columns:1fr}}
+.side{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-width:0}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--line)}
+.tab{padding:11px 6px;border:0;background:none;cursor:pointer;color:var(--muted);font-weight:600;border-bottom:2px solid transparent}
+.tab[aria-selected=true]{color:var(--ink);border-bottom-color:var(--accent)}
+.pane{padding:16px 18px 28px;overflow:auto}
+.sec{margin-bottom:20px}
+.sec h3{font-size:12px;font-weight:600;color:var(--muted);margin:0 0 8px}
+.lbl{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px}
+.full{width:100%}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;background:var(--field)}
+.seg button{flex:1;padding:7px 6px;border:0;background:none;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink)}
+.chk{display:flex;gap:8px;align-items:center;margin:6px 0}
+.chk input{width:16px;height:16px;accent-color:var(--accent)}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.note{color:var(--muted);font-size:12px;margin:6px 0 0}
+.presets{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.preset{border:1px solid var(--line);border-radius:8px;background:var(--field);padding:9px;text-align:left;cursor:pointer}
+.preset b{display:block;font-size:13px}
+.preset span{display:block;color:var(--muted);font-size:12px}
+.preset:hover{border-color:var(--accent)}
+
+details.fg{border:1px solid var(--line);border-radius:8px;margin-bottom:8px;background:var(--panel)}
+details.fg>summary{cursor:pointer;padding:10px 12px;font-weight:600;display:flex;align-items:center;list-style:none}
+details.fg>summary::-webkit-details-marker{display:none}
+details.fg>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin-left:8px;transition:transform .15s}
+details.fg[open]>summary::after{transform:rotate(-135deg)}
+.cnt{margin-left:auto;font-weight:500;font-size:12px;color:var(--accent);background:var(--accent-soft);border-radius:10px;padding:1px 8px}
+.cnt:empty{display:none}
+.fbody{padding:0 12px 6px}
+.frow{border-top:1px solid var(--line);padding:8px 0}
+.fstyle{display:grid;grid-template-columns:62px 32px 32px 1fr;gap:6px;align-items:center;margin:6px 0 4px 24px}
+.fstyle .inp,.fstyle .sel{padding:5px 6px}
+.tog{height:30px;border:1px solid var(--line);border-radius:6px;background:var(--field);cursor:pointer}
+.tog[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.showlbl{margin-left:24px;font-size:12px;color:var(--muted)}
+@media (prefers-reduced-motion: reduce){details.fg>summary::after{transition:none}}
+
+/* preview */
+.stage{display:flex;flex-direction:column;min-width:0}
+.stagebar{display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.stagebar .dims{font-weight:600}
+.stagebar .count{color:var(--muted)}
+.qbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 20px;border-bottom:1px solid var(--line);background:var(--accent-soft)}
+.qbar #qmsg{flex:1;min-width:220px}
+.qact{display:flex;gap:8px;flex-wrap:wrap}
+.zoom{margin-left:auto;display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12px}
+.zoom .seg button{padding:4px 10px}
+.warn{color:var(--warn);padding:8px 20px 0;min-height:1.6em;margin:0}
+.desk{flex:1;background:var(--desk);overflow:auto;padding:28px;min-height:420px}
+.sheet{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start}
+.pages{display:flex;flex-direction:column;gap:24px}
+.sheet.tiled{display:grid;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);width:8.5in;height:11in;padding:.5in;gap:0;align-content:start;justify-content:center}
+
+/* the label is paper: always white with dark ink */
+.label{background:#fff;color:#000;box-shadow:0 1px 2px rgba(0,0,0,.25),0 0 0 1px rgba(0,0,0,.12);overflow:hidden;display:flex;gap:1.6mm;align-items:center;padding:1.6mm;flex:none;border-radius:1.2mm}
+.tiled .label{box-shadow:none;border-radius:0;outline:1px dashed #9aa}
+.label.over{box-shadow:0 0 0 2px #c0391b}
+.label{position:relative}
+.label.pickable{cursor:pointer}
+.label.pickable:hover{box-shadow:0 0 0 2px #1f5a47}
+.label.picked{box-shadow:0 0 0 2px #1f5a47}
+.label.unpicked{opacity:.35}
+.pick{position:absolute;top:1mm;right:1mm;width:3.2mm;height:3.2mm;border-radius:.7mm;border:.35mm solid #1f5a47;background:#fff;display:flex;align-items:center;justify-content:center;font:700 2.6mm/1 Helvetica,Arial,sans-serif;color:#fff}
+.picked .pick{background:#1f5a47}
+.label.round{border-radius:50%;justify-content:center;text-align:center;padding:2mm}
+.label.qr-top{flex-direction:column;justify-content:center}
+.label.qr-right{flex-direction:row-reverse}
+.qr{flex:none;text-align:center}
+.qr canvas,.qr img{display:block;margin:0 auto}
+.sid{font-weight:700;margin-top:.6mm}
+.txt{min-width:0;flex:1;max-width:100%;max-height:100%;line-height:1.16;overflow:hidden}
+.qr-top .txt{flex:none;width:100%}
+.ln{overflow-wrap:anywhere}
+.fit .ln{white-space:nowrap;overflow-wrap:normal}
+.k{opacity:.65;font-weight:400;font-style:normal}
+.label.tt{flex-direction:column;align-items:stretch;justify-content:flex-start;gap:.8mm}
+.ttl{white-space:nowrap;overflow:hidden;line-height:1.1;flex:none}
+.ttl.wrap{white-space:normal;overflow-wrap:anywhere}
+.bd{display:flex;gap:1.6mm;align-items:center;flex:1;min-height:0;min-width:0}
+.tt.qr-right .bd{flex-direction:row-reverse}
+
+@media print{
+  body{background:#fff}
+  .bar,.side,.stagebar,.warn,.qbar{display:none!important}
+  .app{display:block}
+  .desk{padding:0;background:#fff;overflow:visible}
+  .sheet{zoom:1!important;display:block;gap:0}
+  .pages{display:flex;flex-direction:column;gap:24px}
+.sheet.tiled{display:grid;box-shadow:none;page-break-after:always}
+  .label{box-shadow:none!important;border-radius:0}
+  .sheet:not(.tiled) .label{page-break-after:always;break-after:page}
+  .label.round{border-radius:50%}
+  html,body{height:auto!important;margin:0!important}
+  .app,.stage,.desk{min-height:0!important;height:auto!important;overflow:visible!important;padding:0!important;margin:0!important}
+  .sheet:not(.tiled) .label:last-child{page-break-after:auto;break-after:auto}
+  .pick{display:none!important}
+  .label.unpicked{display:none!important}
+  .label{opacity:1!important;box-shadow:none!important}
+}
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="brand"><b>Sample Label Studio</b><span>Brother QL-820NWB and Uline badge inserts</span></div>
+  <div class="tplwrap">
+    <label for="tpl">Template</label>
+    <select id="tpl" class="sel" style="width:200px"><option value="">Custom (not saved)</option></select>
+  </div>
+  <button class="btn" id="saveOpen" type="button">Save template</button>
+  <button class="btn primary" id="print" type="button">Print</button>
+</header>
+
+<div id="saveBar" class="bar is-hidden" style="top:auto;position:relative">
+  <label for="tplName" style="color:var(--muted);font-size:12px">Template name</label>
+  <input id="tplName" class="inp" type="text" placeholder="e.g. Hangtag 1.1 × 2.4 QR left" maxlength="60" style="flex:1;min-width:200px">
+  <button class="btn primary" id="save" type="button">Save template</button>
+  <button class="btn is-hidden" id="del" type="button">Delete template</button>
+  <span id="saveMsg" style="color:var(--muted);font-size:12px"></span>
+</div>
+
+<main class="app">
+  <aside class="side controls" aria-label="Label settings">
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="t-paper" aria-selected="true" aria-controls="p-paper">Paper</button>
+      <button class="tab" role="tab" id="t-layout" aria-selected="false" aria-controls="p-layout">Layout</button>
+      <button class="tab" role="tab" id="t-content" aria-selected="false" aria-controls="p-content">Content</button>
+    </div>
+
+    <!-- PAPER -->
+    <section class="pane" role="tabpanel" id="p-paper" aria-labelledby="t-paper">
+      <div class="sec">
+        <h3>Print on</h3>
+        <div class="seg" role="group" aria-label="Print on">
+          <button type="button" id="m-brother" aria-pressed="true">Brother label roll</button>
+          <button type="button" id="m-badge" aria-pressed="false">Uline badge insert</button>
+        </div>
+      </div>
+
+      <div class="sec" id="brotherBox">
+        <label class="lbl" for="roll">Label roll</label>
+        <select id="roll" class="sel full"></select>
+        <div id="lenBox" class="is-hidden">
+          <label class="lbl">Label length</label>
+          <div class="seg" role="group" aria-label="Label length">
+            <button type="button" id="len-auto" aria-pressed="true">Fit to content</button>
+            <button type="button" id="len-fixed" aria-pressed="false">Set length</button>
+          </div>
+          <div id="lenFixedBox" class="is-hidden">
+            <label class="lbl" for="len">Length (inches)</label>
+            <input id="len" class="inp full" type="number" min="1" max="39" step="0.1" value="2.5">
+          </div>
+          <p class="note" id="lenTip"></p>
+        </div>
+        <label class="lbl">Orientation</label>
+        <div class="seg" role="group" aria-label="Orientation">
+          <button type="button" id="o-land" aria-pressed="true">Landscape</button>
+          <button type="button" id="o-port" aria-pressed="false">Portrait</button>
+        </div>
+      </div>
+
+      <div class="sec is-hidden" id="badgeBox">
+        <label class="lbl" for="badge">Badge size (fits Uline badge holders)</label>
+        <select id="badge" class="sel full"></select>
+        <label class="lbl">Print as</label>
+        <div class="seg" role="group" aria-label="Print as">
+          <button type="button" id="b-tile" aria-pressed="true">Letter sheet, cut lines</button>
+          <button type="button" id="b-single" aria-pressed="false">One per page</button>
+        </div>
+        <p class="note" id="badgeTip"></p>
+      </div>
+    </section>
+
+    <!-- LAYOUT -->
+    <section class="pane is-hidden" role="tabpanel" id="p-layout" aria-labelledby="t-layout">
+      <div class="sec">
+        <h3>Start from a layout</h3>
+        <div class="presets" id="presets"></div>
+      </div>
+      <div class="sec">
+        <h3>QR code</h3>
+        <div class="chk"><input type="checkbox" id="qr-on" checked><label for="qr-on">Print QR code</label></div>
+        <div id="qrBox">
+          <div class="two">
+            <div><label class="lbl" for="qr-pos">Position</label>
+              <select id="qr-pos" class="sel full"><option value="qr-left">Left</option><option value="qr-right">Right</option><option value="qr-top">Top</option></select></div>
+            <div><label class="lbl" for="qr-size">Size</label><input id="qr-size" type="range" min="25" max="100" value="55"></div>
+          </div>
+          <div class="chk"><input type="checkbox" id="qr-id" checked><label for="qr-id">Sample ID under QR</label></div>
+          <p class="note" id="qrTip"></p>
+        </div>
+      </div>
+      <div class="sec">
+        <h3>Text style</h3>
+        <label class="lbl" for="font">Font</label>
+        <select id="font" class="sel full">
+          <option value="Helvetica, Arial, sans-serif">Helvetica / Arial</option>
+          <option value="Inter, Helvetica, Arial, sans-serif">Inter</option>
+          <option value="Montserrat, Helvetica, Arial, sans-serif">Montserrat</option>
+          <option value="'Roboto Condensed', 'Arial Narrow', Arial, sans-serif">Roboto Condensed</option>
+          <option value="Oswald, 'Arial Narrow', Arial, sans-serif">Oswald</option>
+          <option value="'Libre Baskerville', Georgia, serif">Libre Baskerville</option>
+          <option value="Georgia, 'Times New Roman', serif">Georgia</option>
+          <option value="'Roboto Mono', 'Courier New', monospace">Roboto Mono</option>
+        </select>
+        <div class="two">
+          <div><label class="lbl" for="align">Alignment</label>
+            <select id="align" class="sel full"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div>
+          <div id="scaleBox"><label class="lbl" for="scale">Scale all text</label><input id="scale" type="range" min="60" max="200" value="100"></div>
+        </div>
+        <label class="lbl" for="nameMode">Item name</label>
+        <select id="nameMode" class="sel full"><option value="top">Across the top, full width</option><option value="inline">With the other details</option></select>
+        <div class="chk"><input type="checkbox" id="autofit"><label for="autofit">Auto-fit text to the label</label></div>
+        <p class="note" id="fitTip"></p>
+        <p class="note">The QL-820NWB prints black, and red only on DK-2251 black/red rolls. Badge inserts print in any color on a regular printer.</p>
+      </div>
+    </section>
+
+    <!-- CONTENT -->
+    <section class="pane is-hidden" role="tabpanel" id="p-content" aria-labelledby="t-content">
+      <p class="note" style="margin:0 0 12px">Open a group and tick what to show. Each field has its own size, bold, italic, and color.</p>
+      <div id="groups"></div>
+    </section>
+  </aside>
+
+  <section class="stage" aria-label="Preview">
+    <div class="stagebar">
+      <span class="dims" id="dims"></span>
+      <span class="count" id="count"></span>
+      <div class="zoom">Zoom
+        <div class="seg" role="group" aria-label="Zoom">
+          <button type="button" data-z="1" aria-pressed="false">100%</button>
+          <button type="button" data-z="1.5" aria-pressed="true">150%</button>
+          <button type="button" data-z="2" aria-pressed="false">200%</button>
+        </div>
+      </div>
+    </div>
+    <div class="qbar" id="qbar">
+      <span id="qmsg">Checking the Airtable print queue…</span>
+      <span class="qact">
+        <button class="btn" id="qall" type="button">Select all</button>
+        <button class="btn" id="qnone" type="button">Select none</button>
+        <button class="btn" id="qrefresh" type="button">Refresh queue</button>
+        <button class="btn is-hidden" id="qclear" type="button">Clear printed labels from queue</button>
+      </span>
+    </div>
+    <p class="warn" id="warn" role="status"></p>
+    <div class="desk"><div class="sheet" id="sheet"></div></div>
+  </section>
+</main>
+
+<script>
+const ROLLS = [
+  {k:"DK-1209", n:'DK-1209 Small address, 1.1" × 2.4"', w:29, h:62},
+  {k:"DK-1201", n:'DK-1201 Standard address, 1.1" × 3.5"', w:29, h:90.3},
+  {k:"DK-1208", n:'DK-1208 Large address, 1.4" × 3.5"', w:38, h:90.3},
+  {k:"DK-1202", n:'DK-1202 Shipping, 2.4" × 3.9"', w:62, h:100},
+  {k:"DK-1204", n:'DK-1204 Multi-purpose, 0.66" × 2.1"', w:17, h:54},
+  {k:"DK-1203", n:'DK-1203 File folder, 0.66" × 3.4"', w:17, h:87},
+  {k:"DK-3235", n:'DK-3235 Removable, 1.1" × 2.1"', w:29, h:54},
+  {k:"DK-1221", n:'DK-1221 Square, 0.9" × 0.9"', w:23, h:23},
+  {k:"DK-1218", n:'DK-1218 Round, 1" diameter', w:24, h:24, round:true},
+  {k:"DK-1219", n:'DK-1219 Round, 1/2" diameter', w:12, h:12, round:true},
+  {k:"DK-2205", n:'DK-2205 Continuous paper, 2.4" wide', w:62, cont:true},
+  {k:"DK-2251", n:'DK-2251 Continuous black/red, 2.4" wide', w:62, cont:true},
+  {k:"DK-2113", n:'DK-2113 Continuous clear film, 2.4" wide', w:62, cont:true},
+  {k:"DK-N5224", n:'DK-N5224 Continuous non-adhesive, 2.1" wide', w:54, cont:true},
+  {k:"DK-2223", n:'DK-2223 Continuous paper, 2" wide', w:50, cont:true},
+  {k:"DK-2210", n:'DK-2210 Continuous paper, 1.1" wide', w:29, cont:true}
+];
+// Uline badge holder usable sizes (W x H inches) and their paper inserts.
+const BADGES = [
+  {k:"U-3x2", n:'3" × 2" horizontal (insert S-14784)', w:3, h:2},
+  {k:"U-2x3", n:'2" × 3" vertical (insert S-14784)', w:2, h:3},
+  {k:"U-4x3", n:'4" × 3" horizontal (insert S-10446)', w:4, h:3},
+  {k:"U-3x4", n:'3" × 4" vertical (insert S-10446)', w:3, h:4},
+  {k:"U-4x6", n:'4" × 6" vertical (insert S-6745)', w:4, h:6}
+];
+const KEYS = ["id","name","brand","style","color","size","url","sku","category","gender","season","msrp","composition","location","sampleType","features","date"];
+const GROUPS = [
+  {g:"Identity", f:[["id","Sample ID","ID"],["name","Item name","Name"],["brand","Brand","Brand"],["style","Brand style #","Style"],["sku","Brand SKU / Product ID","SKU"]]},
+  {g:"Tracking", f:[["season","Dev Season","Dev"],["date","Date (purchase date)","Date"]]},
+  {g:"Size & color", f:[["size","Size","Size"],["color","Color","Color"]]},
+  {g:"Classification", f:[["category","Category","Cat."],["gender","Gender","Gender"],["sampleType","Sample type","Type"]]},
+  {g:"Price", f:[["msrp","MSRP","MSRP"]]},
+  {g:"Materials & features", f:[["composition","Composition","Comp."],["features","Features","Features"]]},
+  {g:"Storage", f:[["location","Location","Loc."]]}
+];
+const COLORS = [["#000000","Black"],["#c8102e","Red"],["#555555","Dark gray"],["#1f5a47","Green"],["#1d4e89","Blue"]];
+const MM = 96/25.4;
+const $ = id => document.getElementById(id);
+const esc = s => String(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const F = (on,size,extra) => Object.assign({on,size,bold:false,italic:false,color:"#000000",label:false}, extra||{});
+
+function baseFields(){
+  const f = {}; GROUPS.forEach(G => G.f.forEach(([k]) => f[k] = F(false,7))); return f;
+}
+function defaults(){
+  const fields = baseFields();
+  Object.assign(fields.name, {on:true,size:9,bold:true}); fields.brand.on = true;
+  Object.assign(fields.size, {on:true,size:8,bold:true,label:true}); fields.color.on = true;
+  return {media:"brother", roll:"DK-1209", lenMode:"auto", lenIn:2.5, orient:"land", badge:"U-3x4", badgeMode:"tile",
+          font:"Helvetica, Arial, sans-serif", align:"left", scale:100, autoFit:true, nameMode:"top", qr:{on:true,pos:"qr-left",size:55,showId:true}, fields};
+}
+
+// Layout presets: a starting point the user can keep editing.
+const PRESETS = [
+  {n:"Factory sample (no QR)", d:"For samples sent to manufacturers: ID, name, style #, size, color, season", set:s => { s.nameMode="top"; s.qr.on = false; s.align="left"; only(s,{name:[9,1],id:[8,1,1],style:[7,0,1],size:[7,1,1],color:[7,0,1],season:[7,0,1]}); }},
+  {n:"Hangtag", d:"Name across top, QR, dev season, date, size", set:s => { s.nameMode="top"; s.qr = {on:true,pos:"qr-left",size:80,showId:true}; s.align="left"; only(s,{name:[9,1],season:[7.5,1,1],date:[7,0,1],size:[7,0,1]}); }},
+  {n:"Detail tag", d:"QR left, full product info", set:s => { s.nameMode="top"; s.qr = {on:true,pos:"qr-left",size:70,showId:true}; s.align="left"; only(s,{name:[8,1],season:[6.5,1,1],date:[6.5,0,1],brand:[6.5],style:[6.5,0,1],size:[6.5,0,1],color:[6.5,0,1],msrp:[6.5,0,1]}); }},
+  {n:"Badge, vertical", d:"QR on top, large name", set:s => { s.nameMode="inline"; s.qr = {on:true,pos:"qr-top",size:60,showId:true}; s.align="center"; only(s,{name:[18,1],season:[12,1,1],date:[10,0,1],brand:[11],size:[11,0,1]}); }},
+  {n:"Badge, horizontal", d:"Name across top, QR, details", set:s => { s.nameMode="top"; s.qr = {on:true,pos:"qr-left",size:80,showId:true}; s.align="left"; only(s,{name:[16,1],season:[11,1,1],date:[10,0,1],brand:[10],style:[9,0,1],size:[9,0,1]}); }},
+  {n:"Details only", d:"No QR, text fills the label", set:s => { s.nameMode="inline"; s.qr.on = false; s.align="left"; only(s,{name:[10,1],season:[8,1,1],date:[7,0,1],size:[7,0,1]}); }},
+  {n:"QR only", d:"Big QR with Sample ID", set:s => { s.nameMode="inline"; s.qr = {on:true,pos:"qr-top",size:100,showId:true}; s.align="center"; only(s,{}); }}
+];
+function only(s,map){ // map key -> [size, bold, showLabel]
+  Object.keys(s.fields).forEach(k => s.fields[k].on = false);
+  Object.entries(map).forEach(([k,[size,b,l]]) => Object.assign(s.fields[k], {on:true,size,bold:!!b,label:!!l,italic:false}));
+}
+
+let S = defaults(), templates = [], db = null, zoom = 1.5;
+
+// ---------- build controls ----------
+ROLLS.forEach(r => $("roll").add(new Option(r.n, r.k)));
+BADGES.forEach(b => $("badge").add(new Option(b.n, b.k)));
+PRESETS.forEach((p,i) => {
+  const b = document.createElement("button"); b.type = "button"; b.className = "preset";
+  b.innerHTML = `<b>${p.n}</b><span>${p.d}</span>`;
+  b.addEventListener("click", () => { p.set(S); changed(); });
+  $("presets").appendChild(b);
+});
+function buildGroups(){
+  GROUPS.forEach((G,gi) => {
+    const d = document.createElement("details"); d.className = "fg"; if(gi === 0) d.open = true;
+    d.innerHTML = `<summary>${G.g}<span class="cnt" data-g="${gi}"></span></summary><div class="fbody"></div>`;
+    const body = d.querySelector(".fbody");
+    G.f.forEach(([k,label]) => {
+      const row = document.createElement("div"); row.className = "frow";
+      row.innerHTML = `
+        <div class="chk"><input type="checkbox" id="on-${k}"><label for="on-${k}">${label}</label></div>
+        <div class="fstyle" id="st-${k}">
+          <input class="inp" type="number" id="sz-${k}" min="4" max="72" step="0.5" aria-label="${label} size in points" title="Size (pt)">
+          <button type="button" class="tog" id="b-${k}" aria-label="Bold" title="Bold"><b>B</b></button>
+          <button type="button" class="tog" id="i-${k}" aria-label="Italic" title="Italic"><i>I</i></button>
+          <select class="sel" id="c-${k}" aria-label="${label} color">${COLORS.map(([v,n])=>`<option value="${v}">${n}</option>`).join("")}</select>
+        </div>
+        <div class="chk showlbl" id="lw-${k}"><input type="checkbox" id="l-${k}"><label for="l-${k}">Show field name</label></div>`;
+      body.appendChild(row);
+      const f = () => S.fields[k];
+      row.querySelector(`#on-${k}`).addEventListener("change", e => { f().on = e.target.checked; changed(); });
+      row.querySelector(`#sz-${k}`).addEventListener("input", e => { f().size = Number(e.target.value)||7; changed(); });
+      row.querySelector(`#b-${k}`).addEventListener("click", () => { f().bold = !f().bold; changed(); });
+      row.querySelector(`#i-${k}`).addEventListener("click", () => { f().italic = !f().italic; changed(); });
+      row.querySelector(`#c-${k}`).addEventListener("change", e => { f().color = e.target.value; changed(); });
+      row.querySelector(`#l-${k}`).addEventListener("change", e => { f().label = e.target.checked; changed(); });
+    });
+    $("groups").appendChild(d);
+  });
+}
+buildGroups();
+
+// tabs
+["paper","layout","content"].forEach(t => $("t-"+t).addEventListener("click", () => {
+  ["paper","layout","content"].forEach(o => { $("t-"+o).setAttribute("aria-selected", String(o===t)); $("p-"+o).classList.toggle("is-hidden", o!==t); });
+}));
+document.querySelectorAll("[data-z]").forEach(b => b.addEventListener("click", () => {
+  zoom = Number(b.dataset.z); document.querySelectorAll("[data-z]").forEach(x => x.setAttribute("aria-pressed", String(x===b))); applyZoom();
+}));
+function applyZoom(){ $("sheet").style.zoom = zoom; }
+
+const pressed = (id,on) => $(id).setAttribute("aria-pressed", String(on));
+function syncControls(){
+  const brother = S.media === "brother";
+  pressed("m-brother", brother); pressed("m-badge", !brother);
+  $("brotherBox").classList.toggle("is-hidden", !brother); $("badgeBox").classList.toggle("is-hidden", brother);
+  $("roll").value = S.roll; $("badge").value = S.badge; $("len").value = S.lenIn;
+  const roll = ROLLS.find(r => r.k === S.roll);
+  $("lenBox").classList.toggle("is-hidden", !roll.cont);
+  $("lenFixedBox").classList.toggle("is-hidden", S.lenMode !== "fixed");
+  pressed("len-auto", S.lenMode==="auto"); pressed("len-fixed", S.lenMode==="fixed");
+  $("lenTip").textContent = S.lenMode==="auto" ? "The label grows as long as the content needs, so nothing gets cut off." : "Every label prints at this length. Anything that doesn't fit is flagged.";
+  pressed("o-land", S.orient==="land"); pressed("o-port", S.orient==="port");
+  pressed("b-tile", S.badgeMode==="tile"); pressed("b-single", S.badgeMode==="single");
+  $("badgeTip").textContent = S.badgeMode==="tile" ? "Prints on 8.5 × 11 paper or card stock with dashed cut lines. Cut and slide into the holder." : "One badge per page at its exact size, for perforated insert sheets fed one at a time.";
+  $("font").value = S.font; $("align").value = S.align; $("scale").value = S.scale;
+  $("nameMode").value = S.nameMode || "inline"; $("autofit").checked = !!S.autoFit; $("scaleBox").classList.toggle("is-hidden", !!S.autoFit);
+  $("qr-on").checked = S.qr.on; $("qr-pos").value = S.qr.pos; $("qr-size").value = S.qr.size; $("qr-id").checked = S.qr.showId;
+  $("qrBox").classList.toggle("is-hidden", !S.qr.on);
+  GROUPS.forEach((G,gi) => {
+    let n = 0;
+    G.f.forEach(([k]) => {
+      const f = S.fields[k]; if(f.on) n++;
+      $("on-"+k).checked = f.on; $("sz-"+k).value = f.size; pressed("b-"+k, !!f.bold); pressed("i-"+k, !!f.italic);
+      $("c-"+k).value = f.color; $("l-"+k).checked = !!f.label;
+      $("st-"+k).classList.toggle("is-hidden", !f.on); $("lw-"+k).classList.toggle("is-hidden", !f.on);
+    });
+    document.querySelector(`.cnt[data-g="${gi}"]`).textContent = n ? `${n} on` : "";
+  });
+}
+
+// ---------- data ----------
+// Labels come from the Airtable print queue (records with Print Queue ticked),
+// read through the viewer's own Airtable connection.
+const AT = {server:"Airtable", base:"appKtpXk0YgWdp8Ac", table:"tblwyHmt86GNwAU1m",
+            labelData:"fld8vSlUXNO9AyYkI", queue:"fldt3i65krI4cHgIM"};
+let queue = [];          // [{rec, label}]
+let printedIds = [];     // record ids included in the last print
+let picked = new Set();  // record ids the user has selected to print
+let printing = false;    // true while building the PDF: render only picked labels
+let mcp = null;
+let knownRecs = new Set();
+const parseLabel = t => { const p = String(t||"").split("|"), o = {}; KEYS.forEach((k,i) => o[k] = (p[i]||"").trim()); return o; };
+function readLabels(){
+  if(queue.length) return (printing ? queue.filter(q => picked.has(q.rec)) : queue).map(q => q.label);
+  const hp = new URLSearchParams(location.hash.slice(1));
+  const raw = hp.get("l") || new URLSearchParams(location.search).get("l") || "";
+  return raw.split("~").filter(Boolean).map(parseLabel).filter(x => x.id);
+}
+function qmsg(text, showClear){ $("qmsg").textContent = text; $("qclear").classList.toggle("is-hidden", !showClear); }
+function mcpErrorText(e){
+  switch(e && e.code){
+    case "server_not_connected": case "selection_required":
+      return "Connect Airtable to Claude (claude.ai → Settings → Connectors → Airtable), then press Refresh queue.";
+    case "needs_reauth": return "Your Airtable connection expired. Reconnect Airtable in claude.ai → Settings → Connectors, then press Refresh queue.";
+    case "not_in_manifest": return "Airtable access is turned off for this page. Allow Airtable for this page, then press Refresh queue.";
+    case "blocked_by_policy": case "approval_required": return "Your organization's settings block Airtable here. Ask your Claude admin.";
+    case "server_unavailable": return "Airtable didn't answer. Press Refresh queue in a moment.";
+    case "tool_error": return "Airtable refused the request: " + (e.message || "unknown error");
+    default: return "Couldn't read the print queue (" + ((e && e.code) || "error") + "). Press Refresh queue to try again.";
+  }
+}
+async function loadQueue(){
+  if(!mcp){ qmsg("Printing from Airtable needs this page opened in Claude while signed in."); return; }
+  qmsg("Checking the Airtable print queue…");
+  try{
+    const res = await mcp.callTool(AT.server, "list_records_for_table", {
+      baseId: AT.base, tableId: AT.table, fieldIds: [AT.labelData, AT.queue], pageSize: 500,
+      filters: {operator:"and", operands:[{operator:"=", operands:[AT.queue, true]}]}
+    }, {cache:false});
+    const recs = (res && res.payload && res.payload.records) || [];
+    queue = recs.map(r => ({rec: r.id, label: parseLabel((r.cellValuesByFieldId||{})[AT.labelData])})).filter(q => q.label.id);
+    queue.sort((a,b) => a.label.id.localeCompare(b.label.id, undefined, {numeric:true}));
+    const prev = picked; picked = new Set(queue.map(q => q.rec).filter(r => !knownRecs.has(r) || prev.has(r)));
+    knownRecs = new Set(queue.map(q => q.rec));
+    qmsg(queue.length ? `${queue.length} label${queue.length>1?"s":""} in the print queue. Click a label to select or unselect it.`
+                      : "The print queue is empty. Tick Print Queue on a sample in Airtable (or press 🖨 Print label on its page), then press Refresh queue.", false);
+  }catch(e){ queue = []; qmsg(mcpErrorText(e)); }
+  render();
+}
+async function clearQueue(){
+  if(!mcp || !printedIds.length) return;
+  $("qclear").disabled = true;
+  try{
+    for(let i = 0; i < printedIds.length; i += 50){
+      await mcp.callTool(AT.server, "update_records_for_table", {
+        baseId: AT.base, tableId: AT.table,
+        records: printedIds.slice(i, i+50).map(id => ({id, fields: {[AT.queue]: false}}))
+      });
+    }
+    printedIds = [];
+    await loadQueue();
+  }catch(e){ qmsg(mcpErrorText(e) + " The queue was not cleared.", true); }
+  finally{ $("qclear").disabled = false; }
+}
+const SAMPLE = [{id:"COMP1000",name:"Example Performance Polo",brand:"Brand Name",style:"ST-1234",color:"Navy",size:"M",url:"https://airtable.com/example",sku:"123456-NVY",category:"K – Polo",gender:"Mens",season:"SS27",msrp:"68",composition:"92% Polyester / 8% Spandex",location:"Rack A",sampleType:"Competitor",features:"Moisture-wicking, UPF 50, anti-odor",date:"09/12/26"}];
+function val(L,k){ const v = L[k]; if(!v) return ""; if(k==="msrp"){ const n = Number(v); return isNaN(n) ? v : "$" + (n % 1 ? n.toFixed(2) : n); } return v; }
+
+// ---------- render ----------
+const pageStyle = document.createElement("style"); document.head.appendChild(pageStyle);
+
+function geometry(){
+  if(S.media === "badge"){ const b = BADGES.find(x => x.k === S.badge); return {w:b.w*25.4, h:b.h*25.4, auto:false, port:b.h>b.w, round:false, cont:false, name:b.n.split(" (")[0]}; }
+  const r = ROLLS.find(x => x.k === S.roll);
+  const auto = r.cont && S.lenMode === "auto";
+  const len = r.cont ? Math.max(1, Math.min(39, Number(S.lenIn)||2.5))*25.4 : r.h;
+  const square = r.round || r.w === r.h;
+  const port = S.orient === "port" && !square;
+  let w = port ? r.w : len, h = port ? len : r.w;
+  if(square){ w = r.w; h = r.w; }
+  return {w, h, auto, port, round:!!r.round, cont:!!r.cont, name:r.k};
+}
+
+// Draw every label at text scale k. With real=false the QR is a same-size placeholder (fast, for fitting).
+function draw(G, labels, k, real, wrapTitle){
+  const tiled = S.media === "badge" && S.badgeMode === "tile";
+  const sheet = $("sheet"); sheet.style.zoom = 1; sheet.innerHTML = ""; sheet.className = tiled ? "pages" : "sheet";
+  let per = 0, cols = 1, page = null;
+  if(tiled){ cols = Math.max(1, Math.floor(7.5*25.4 / G.w)); per = cols * Math.max(1, Math.floor(10*25.4 / G.h)); }
+  const holder = i => {
+    if(!tiled) return sheet;
+    if(i % per === 0){
+      page = document.createElement("div"); page.className = "sheet tiled";
+      page.style.gridTemplateColumns = `repeat(${cols}, ${G.w}mm)`; page.style.gridAutoRows = `${G.h}mm`;
+      sheet.appendChild(page);
+    }
+    return page;
+  };
+  // QR sits on the fixed side; smaller by default to leave room for text.
+  const fixed = G.port ? G.w : G.h;
+  const topName = S.nameMode === "top" && S.qr.pos !== "qr-top" && S.fields.name.on;
+  const qrBase = S.qr.pos==="qr-top" ? Math.min(G.w, G.h)*0.62 : fixed*(topName ? 0.8 : 0.85);
+  let qrMm = qrBase * (S.qr.size/100) * (S.qr.showId ? 0.84 : 1);
+  qrMm = Math.max(Math.min(10, fixed*0.55), qrMm);
+
+  labels.forEach((L,li) => {
+    const el = document.createElement("div");
+    el.className = "label " + (S.qr.on ? S.qr.pos : "text-only") + (G.round ? " round" : "") + (G.auto && !G.port ? " fit" : "");
+    el.style.fontFamily = S.font;
+    el.style.width = G.auto && !G.port ? "auto" : G.w + "mm";
+    el.style.height = G.auto && G.port ? "auto" : G.h + "mm";
+    if(G.auto){ if(G.port) el.style.minHeight = "25.4mm"; else el.style.minWidth = "25.4mm"; }
+    const lines = []; let title = "";
+    const tt = S.nameMode === "top" && S.qr.pos !== "qr-top" && S.fields.name.on && val(L,"name");
+    if(tt) el.classList.add("tt");
+    GROUPS.forEach(Gr => Gr.f.forEach(([key,,short]) => {
+      const f = S.fields[key], v = val(L,key);
+      if(!f.on || !v) return;
+      if(tt && key === "name"){ title = `<div class="ttl${wrapTitle ? " wrap" : ""}" style="font-size:${(f.size*k).toFixed(2)}pt;font-weight:${f.bold?700:400};font-style:${f.italic?"italic":"normal"};color:${f.color};text-align:${S.align}">${esc(v)}</div>`; return; }
+      const st = `font-size:${(f.size*k).toFixed(2)}pt;font-weight:${f.bold?700:400};font-style:${f.italic?"italic":"normal"};color:${f.color}`;
+      lines.push(`<div class="ln" style="${st}">${f.label ? `<span class="k">${esc(short)} </span>` : ""}${esc(v)}</div>`);
+    }));
+    const txt = lines.length ? `<div class="txt" style="text-align:${S.align}">${lines.join("")}</div>` : "";
+    const idSize = Math.max(5, Math.min(12, qrMm/3.2)) * Math.min(k, 1.4);
+    const qr = S.qr.on ? `<div class="qr"><div class="code" style="width:${qrMm}mm;height:${qrMm}mm;margin:0 auto"></div>${S.qr.showId ? `<div class="sid" style="font-size:${idSize.toFixed(2)}pt">${esc(L.id)}</div>` : ""}</div>` : "";
+    el.innerHTML = tt ? title + `<div class="bd">${qr + txt}</div>` : qr + txt;
+    if(!printing && queue.length && queue[li]){
+      const rec = queue[li].rec, on = picked.has(rec);
+      el.classList.add("pickable", on ? "picked" : "unpicked");
+      el.insertAdjacentHTML("beforeend", `<span class="pick" aria-hidden="true">${on ? "✓" : ""}</span>`);
+      el.setAttribute("role","checkbox"); el.setAttribute("aria-checked", String(on)); el.tabIndex = 0;
+      el.title = on ? "Selected. Click to skip this label." : "Not selected. Click to print this label.";
+      const toggle = () => { if(picked.has(rec)) picked.delete(rec); else picked.add(rec); render(); };
+      el.addEventListener("click", toggle);
+      el.addEventListener("keydown", e => { if(e.key===" "||e.key==="Enter"){ e.preventDefault(); toggle(); } });
+    }
+    holder(li).appendChild(el);
+    const code = el.querySelector(".code");
+    if(code && real){
+      const px = Math.max(64, Math.round(qrMm * MM * 3));
+      new QRCode(code,{text:L.url||L.id,width:px,height:px,correctLevel:QRCode.CorrectLevel.M});
+      code.querySelectorAll("canvas,img").forEach(n => { n.style.width = qrMm+"mm"; n.style.height = qrMm+"mm"; });
+    }
+  });
+
+  let w = G.w, h = G.h;
+  if(G.auto){
+    const els = [...sheet.querySelectorAll(".label")];
+    const need = Math.max(...els.map(e => G.port ? e.scrollHeight : e.scrollWidth)) / MM + 1;
+    const len = Math.max(25.4, Math.ceil(need/2.54)*2.54);
+    els.forEach(e => { if(G.port) e.style.height = len+"mm"; else e.style.width = len+"mm"; });
+    if(G.port) h = len; else w = len;
+  }
+  let over = 0;
+  sheet.querySelectorAll(".label").forEach(e => {
+    const t = e.querySelector(".txt");
+    const ttl = e.querySelector('.ttl'), bd = e.querySelector('.bd');
+    const bad = (t && (t.scrollHeight > t.clientHeight + 1 || t.scrollWidth > t.clientWidth + 1)) || (ttl && ttl.scrollWidth > ttl.clientWidth + 1) || (bd && bd.scrollHeight > bd.clientHeight + 1) || e.scrollHeight > e.clientHeight + 1 || e.scrollWidth > e.clientWidth + 1;
+    e.classList.toggle("over", bad); if(bad) over++;
+  });
+  return {over, w, h, per, tiled, qrMm, len: G.port ? h : w};
+}
+
+function render(){
+  const G = geometry();
+  let labels = readLabels(); const demo = !labels.length; if(demo) labels = SAMPLE;
+  const nPick = queue.filter(q => picked.has(q.rec)).length;
+  $("count").textContent = demo ? "Example preview. Queue samples in Airtable to print real labels."
+    : `${labels.length} label${labels.length>1?"s":""}`;
+  $("print").disabled = demo;
+  $("qall").classList.toggle("is-hidden", demo); $("qnone").classList.toggle("is-hidden", demo);
+
+  let k = S.scale/100, wrap = false;
+  const solve = w => {
+    const maxK = G.auto ? 1.6 : 3, minK = 0.35;
+    const fits = x => { const r = draw(G, labels, x, false, w); return r.over === 0 && (!G.auto || r.len <= Math.max(G.port ? G.w : G.h, 25.4) * 2.2 || x <= 1); };
+    if(fits(maxK)) return maxK * 0.95;
+    if(!fits(minK)) return minK;
+    let lo = minK, hi = maxK; for(let i = 0; i < 9; i++){ const mid = (lo+hi)/2; if(fits(mid)) lo = mid; else hi = mid; }
+    return lo * 0.95;   // 5% breathing room
+  };
+  if(S.autoFit){
+    // Largest text scale where every label fits. If a one-line name across the top would shrink the
+    // name below ~8 pt, let it wrap to two lines instead so everything stays readable.
+    k = solve(false);
+    const topName = S.nameMode === "top" && S.qr.pos !== "qr-top" && S.fields.name.on;
+    if(topName && k * S.fields.name.size < 8){ const k2 = solve(true); if(k2 > k){ k = k2; wrap = true; } }
+  }
+  const r = draw(G, labels, k, true, wrap);
+  const {w, h, per, tiled, qrMm} = r;
+
+  const fix = G.cont ? `Switch to "Fit to content", make it longer, or use smaller text.` : `Use smaller text, fewer fields, a smaller QR code, or a bigger size.`;
+  $("warn").textContent = r.over ? `${r.over} label${r.over>1?"s are":" is"} cut off (outlined in red). ${S.autoFit ? "Even the smallest text doesn't fit. Turn off some fields or shrink the QR code." : fix}` : "";
+  $("qrTip").textContent = qrMm < 12 ? `QR is ${(qrMm/25.4).toFixed(2)}" wide. Below about 0.5" some phones need to be held close to scan.` : `QR is ${(qrMm/25.4).toFixed(2)}" wide.`;
+  $("fitTip").textContent = S.autoFit ? `Text is at ${Math.round(k*100)}% of the field sizes, the largest that fits.` : "";
+
+  if(tiled) pageStyle.textContent = `@media print{@page{size:8.5in 11in;margin:0}}`;
+  else pageStyle.textContent = `@media print{@page{size:${w.toFixed(2)}mm ${h.toFixed(2)}mm;margin:0}}`;
+  const size = `${(w/25.4).toFixed(2)}" × ${(h/25.4).toFixed(2)}"`;
+  $("dims").textContent = tiled ? `${G.name} · ${size} · ${per} per letter sheet · ${Math.ceil(labels.length/per)} sheet${Math.ceil(labels.length/per)>1?"s":""}` : `${G.name} · ${size}`;
+  applyZoom();
+}
+
+function changed(){ $("tpl").value = ""; $("del").classList.add("is-hidden"); syncControls(); render(); }
+
+// ---------- wire up ----------
+$("m-brother").addEventListener("click", () => { S.media = "brother"; changed(); });
+$("m-badge").addEventListener("click", () => { S.media = "badge"; changed(); });
+$("roll").addEventListener("change", e => { S.roll = e.target.value; changed(); });
+$("badge").addEventListener("change", e => { S.badge = e.target.value; changed(); });
+$("b-tile").addEventListener("click", () => { S.badgeMode = "tile"; changed(); });
+$("b-single").addEventListener("click", () => { S.badgeMode = "single"; changed(); });
+$("len").addEventListener("input", e => { S.lenIn = Number(e.target.value)||2.5; changed(); });
+$("len-auto").addEventListener("click", () => { S.lenMode = "auto"; changed(); });
+$("len-fixed").addEventListener("click", () => { S.lenMode = "fixed"; changed(); });
+$("o-land").addEventListener("click", () => { S.orient = "land"; changed(); });
+$("o-port").addEventListener("click", () => { S.orient = "port"; changed(); });
+$("font").addEventListener("change", e => { S.font = e.target.value; changed(); });
+$("align").addEventListener("change", e => { S.align = e.target.value; changed(); });
+$("scale").addEventListener("input", e => { S.scale = Number(e.target.value); changed(); });
+$("autofit").addEventListener("change", e => { S.autoFit = e.target.checked; changed(); });
+$("nameMode").addEventListener("change", e => { S.nameMode = e.target.value; changed(); });
+$("qr-on").addEventListener("change", e => { S.qr.on = e.target.checked; changed(); });
+$("qr-pos").addEventListener("change", e => { S.qr.pos = e.target.value; changed(); });
+$("qr-size").addEventListener("input", e => { S.qr.size = Number(e.target.value); changed(); });
+$("qr-id").addEventListener("change", e => { S.qr.showId = e.target.checked; changed(); });
+function doPrint(){ window.print(); }
+$("print").addEventListener("click", doPrint);
+$("qall").addEventListener("click", () => { queue.forEach(q => picked.add(q.rec)); render(); });
+$("qnone").addEventListener("click", () => { picked.clear(); render(); });
+$("qrefresh").addEventListener("click", loadQueue);
+$("qclear").addEventListener("click", clearQueue);
+$("saveOpen").addEventListener("click", () => { $("saveBar").classList.toggle("is-hidden"); $("tplName").focus(); });
+
+// ---------- shared templates ----------
+function load(settings){
+  const d = defaults(), s = settings || {};
+  S = Object.assign(d, s, {qr:Object.assign(d.qr, s.qr||{}), fields:d.fields});
+  Object.keys(S.fields).forEach(key => S.fields[key].on = false);
+  if(s.fields) Object.keys(d.fields).forEach(key => { if(s.fields[key] && typeof s.fields[key] === "object") Object.assign(S.fields[key], s.fields[key]); });
+}
+function fillTemplates(){
+  const cur = $("tpl").value;
+  $("tpl").innerHTML = '<option value="">Custom (not saved)</option>';
+  templates.forEach(t => $("tpl").add(new Option(t.name, t.id)));
+  if(templates.some(t=>t.id===cur)) $("tpl").value = cur;
+}
+$("tpl").addEventListener("change", () => {
+  const t = templates.find(x=>x.id===$("tpl").value);
+  if(t){ load(t.settings); syncControls(); render(); $("tplName").value = t.name; $("tpl").value = t.id; $("del").classList.toggle("is-hidden", !db); }
+  else $("del").classList.add("is-hidden");
+});
+$("save").addEventListener("click", async () => {
+  const name = $("tplName").value.trim();
+  if(!name){ $("saveMsg").textContent = "Enter a template name first."; return; }
+  if(!db){ $("saveMsg").textContent = "Saving needs you to be signed in to Claude."; return; }
+  $("save").disabled = true;
+  try{
+    const existing = templates.find(t => t.name.toLowerCase() === name.toLowerCase());
+    const ref = existing ? db.collection("templates").doc(existing.id) : db.collection("templates").doc();
+    await ref.set({name, settings:JSON.parse(JSON.stringify(Object.assign({}, S, {_fitK:undefined}))), updatedAt:new Date().toISOString()});
+    $("saveMsg").textContent = existing ? `Updated "${name}".` : `Saved "${name}" on this computer.`;
+    $("tpl").value = ref.id; $("del").classList.remove("is-hidden");
+  }catch(e){
+    $("saveMsg").textContent = e && e.code === "invalid_argument" ? "You have view-only access, so you can use templates but not save them." : "Couldn't save. Try again in a moment.";
+  }finally{ $("save").disabled = false; }
+});
+$("del").addEventListener("click", async () => {
+  const t = templates.find(x=>x.id===$("tpl").value);
+  if(!t || !db) return;
+  if($("del").dataset.armed !== t.id){ $("del").dataset.armed = t.id; $("del").textContent = "Click again to delete"; setTimeout(() => { $("del").dataset.armed = ""; $("del").textContent = "Delete template"; }, 4000); return; }
+  $("del").dataset.armed = ""; $("del").textContent = "Delete template";
+  try{ await db.collection("templates").doc(t.id).delete(); $("tpl").value=""; $("del").classList.add("is-hidden"); $("saveMsg").textContent = `Deleted "${t.name}".`; }
+  catch(e){ $("saveMsg").textContent = "Couldn't delete this template."; }
+});
+
+syncControls(); render();
+if(document.fonts) document.fonts.ready.then(render);
+
+// ---------- standalone: templates live in this browser; labels come from the link ----------
+const LS = "ssco-label-templates";
+const lsGet = () => { try{ return JSON.parse(localStorage.getItem(LS) || "[]"); }catch(e){ return []; } };
+const lsSet = v => { try{ localStorage.setItem(LS, JSON.stringify(v)); return true; }catch(e){ return false; } };
+db = {collection: () => ({
+  orderBy: () => ({ onSnapshot: cb => { const emit = () => cb({docs: lsGet().sort((x,y)=>x.name.localeCompare(y.name)).map(t => ({id:t.id, data:() => t}))}); db._emit = emit; emit(); } }),
+  doc: id => { id = id || ("t" + Date.now()); return { id,
+    set: async v => { const all = lsGet().filter(t => t.id !== id); all.push(Object.assign({id}, v)); lsSet(all); db._emit && db._emit(); },
+    delete: async () => { lsSet(lsGet().filter(t => t.id !== id)); db._emit && db._emit(); } }; }
+})};
+db.collection("templates").orderBy("name").onSnapshot(snap => { templates = snap.docs.map(d => ({id:d.id, ...d.data()})); fillTemplates(); }, () => {});
+
+const HP = new URLSearchParams(location.hash.slice(1));
+const want = (HP.get("p") || "").toLowerCase();       // preset: factory | hangtag | detail | qr ...
+const tplName = HP.get("t");                            // saved template name in this browser
+const tpl = tplName && templates.find(t => t.name.toLowerCase() === tplName.toLowerCase());
+if(tpl){ load(tpl.settings); $("tpl").value = tpl.id; }
+else if(want){ const pr = PRESETS.find(x => x.n.toLowerCase().startsWith(want)); if(pr) pr.set(S); }
+else { const last = lsGet().find(t => t.id === (localStorage.getItem("ssco-last-tpl")||"")); if(last){ load(last.settings); $("tpl").value = last.id; } }
+$("tpl").addEventListener("change", () => { try{ localStorage.setItem("ssco-last-tpl", $("tpl").value); }catch(e){} });
+$("qbar").classList.add("is-hidden");
+syncControls(); render();
+window.addEventListener("hashchange", () => location.reload());
+// Auto-print when opened from Airtable with labels in the link.
+if(readLabels().length && HP.get("auto") !== "0"){
+  (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => { render(); setTimeout(doPrint, 400); });
+}
+</script>
+</body>
+</html>
