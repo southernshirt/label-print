@@ -286,8 +286,15 @@ details.fg[open]>summary::after{transform:rotate(-135deg)}
         <button class="btn" id="qall" type="button">Select all</button>
         <button class="btn" id="qnone" type="button">Select none</button>
         <button class="btn" id="qrefresh" type="button">Refresh queue</button>
+        <button class="btn" id="qkey" type="button">Airtable key</button>
         <button class="btn is-hidden" id="qclear" type="button">Clear printed labels from queue</button>
       </span>
+    </div>
+    <div class="qbar is-hidden" id="keybar">
+      <span style="flex:1;min-width:220px">Paste your Airtable personal access token. It is saved only in this browser on this computer.</span>
+      <input id="keyin" class="inp" type="password" placeholder="pat..." style="width:260px" autocomplete="off">
+      <button class="btn primary" id="keysave" type="button">Save</button>
+      <button class="btn" id="keyforget" type="button">Forget key</button>
     </div>
     <p class="warn" id="warn" role="status"></p>
     <div class="desk"><div class="sheet" id="sheet"></div></div>
@@ -610,8 +617,8 @@ function render(){
   let labels = readLabels(); const demo = !labels.length; if(demo) labels = SAMPLE;
   const nPick = queue.filter(q => picked.has(q.rec)).length;
   $("count").textContent = demo ? "Example preview. Queue samples in Airtable to print real labels."
-    : `${labels.length} label${labels.length>1?"s":""}`;
-  $("print").disabled = demo;
+    : printing ? "" : `${nPick} of ${labels.length} selected`;
+  $("print").disabled = demo || (!printing && nPick === 0);
   $("qall").classList.toggle("is-hidden", demo); $("qnone").classList.toggle("is-hidden", demo);
 
   let k = S.scale/100, wrap = false;
@@ -668,7 +675,15 @@ $("qr-on").addEventListener("change", e => { S.qr.on = e.target.checked; changed
 $("qr-pos").addEventListener("change", e => { S.qr.pos = e.target.value; changed(); });
 $("qr-size").addEventListener("input", e => { S.qr.size = Number(e.target.value); changed(); });
 $("qr-id").addEventListener("change", e => { S.qr.showId = e.target.checked; changed(); });
-function doPrint(){ window.print(); }
+function doPrint(){
+  printedIds = queue.filter(q => picked.has(q.rec)).map(q => q.rec);
+  printing = true; render();
+  window.print();
+}
+window.addEventListener("afterprint", () => {
+  if(!printing) return; printing = false; render();
+  if(fromApi && printedIds.length) qmsg(`Printed ${printedIds.length} label${printedIds.length>1?"s":""}. Clear them from the queue when they came out right.`, true);
+});
 $("print").addEventListener("click", doPrint);
 $("qall").addEventListener("click", () => { queue.forEach(q => picked.add(q.rec)); render(); });
 $("qnone").addEventListener("click", () => { picked.clear(); render(); });
@@ -741,12 +756,79 @@ if(tpl){ load(tpl.settings); $("tpl").value = tpl.id; }
 else if(want){ const pr = PRESETS.find(x => x.n.toLowerCase().startsWith(want)); if(pr) pr.set(S); }
 else { const last = lsGet().find(t => t.id === (localStorage.getItem("ssco-last-tpl")||"")); if(last){ load(last.settings); $("tpl").value = last.id; } }
 $("tpl").addEventListener("change", () => { try{ localStorage.setItem("ssco-last-tpl", $("tpl").value); }catch(e){} });
-$("qbar").classList.add("is-hidden");
-syncControls(); render();
+// ---------- labels: from the link, or from the Airtable queue with the viewer's own key ----------
+const KEY = "ssco-airtable-pat";
+const getKey = () => { try{ return localStorage.getItem(KEY) || ""; }catch(e){ return ""; } };
+let fromApi = false;
+const API = `https://api.airtable.com/v0/${AT.base}/${AT.table}`;
+function showKeybar(on){ $("keybar").classList.toggle("is-hidden", !on); if(on) $("keyin").focus(); }
+$("qkey").addEventListener("click", () => showKeybar($("keybar").classList.contains("is-hidden")));
+$("keysave").addEventListener("click", () => { const v = $("keyin").value.trim(); if(!v) return; try{ localStorage.setItem(KEY, v); }catch(e){} $("keyin").value = ""; showKeybar(false); loadQueue(); });
+$("keyforget").addEventListener("click", () => { try{ localStorage.removeItem(KEY); }catch(e){} showKeybar(false); queue = []; picked.clear(); qmsg("Key removed from this browser."); render(); });
+
+function setQueue(items){
+  const prev = picked; queue = items;
+  picked = new Set(items.map(q => q.rec).filter(r => !knownRecs.has(r) || prev.has(r)));
+  knownRecs = new Set(items.map(q => q.rec));
+}
+loadQueue = async function(){
+  const key = getKey();
+  if(!key){ qmsg("To print the queue, add your Airtable key (button on the right). To print one label, use 🖨 Print label on a sample."); render(); return; }
+  qmsg("Checking the Airtable print queue…");
+  try{
+    let out = [], offset = "";
+    do{
+      const u = new URL(API);
+      u.searchParams.set("filterByFormula", "{Print Queue}");
+      u.searchParams.append("fields[]", AT.labelData);
+      u.searchParams.set("returnFieldsByFieldId", "true");
+      u.searchParams.set("pageSize", "100");
+      if(offset) u.searchParams.set("offset", offset);
+      const r = await fetch(u, {headers:{Authorization:"Bearer " + key}});
+      if(r.status === 401 || r.status === 403) throw new Error("key");
+      if(!r.ok) throw new Error("HTTP " + r.status);
+      const j = await r.json(); out = out.concat(j.records || []); offset = j.offset || "";
+    }while(offset);
+    const items = out.map(r => ({rec:r.id, label:parseLabel((r.fields||{})[AT.labelData])})).filter(q => q.label.id)
+      .sort((a,b) => a.label.id.localeCompare(b.label.id, undefined, {numeric:true}));
+    fromApi = true; setQueue(items);
+    qmsg(items.length ? `${items.length} label${items.length>1?"s":""} in the print queue. Click a label to select or skip it.` : "The print queue is empty. Press Add to print queue on a sample, then Refresh queue.");
+  }catch(e){
+    qmsg(e.message === "key" ? "Airtable didn't accept that key. Check it has read and write access to Lemonade Stand Inventory, then add it again." : "Couldn't reach Airtable (" + e.message + "). Press Refresh queue to try again.");
+    if(e.message === "key") showKeybar(true);
+  }
+  render();
+};
+clearQueue = async function(){
+  const key = getKey(); if(!key || !printedIds.length) return;
+  $("qclear").disabled = true;
+  try{
+    for(let i = 0; i < printedIds.length; i += 10){
+      const r = await fetch(API, {method:"PATCH", headers:{Authorization:"Bearer " + key, "Content-Type":"application/json"},
+        body: JSON.stringify({records: printedIds.slice(i, i+10).map(id => ({id, fields:{[AT.queue]: false}}))})});
+      if(!r.ok) throw new Error("HTTP " + r.status);
+    }
+    printedIds = []; await loadQueue();
+  }catch(e){ qmsg("Couldn't clear the queue (" + e.message + "). Your key needs write access.", true); }
+  finally{ $("qclear").disabled = false; }
+};
+// rebind buttons to the standalone versions
+$("qrefresh").replaceWith($("qrefresh").cloneNode(true)); $("qrefresh").addEventListener("click", () => loadQueue());
+$("qclear").replaceWith($("qclear").cloneNode(true)); $("qclear").addEventListener("click", () => clearQueue());
+
+syncControls();
+const linkLabels = (() => { const raw = HP.get("l") || new URLSearchParams(location.search).get("l") || ""; return raw.split("~").filter(Boolean).map(parseLabel).filter(x => x.id); })();
 window.addEventListener("hashchange", () => location.reload());
-// Auto-print when opened from Airtable with labels in the link.
-if(readLabels().length && HP.get("auto") !== "0"){
-  (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => { render(); setTimeout(doPrint, 400); });
+if(linkLabels.length){
+  fromApi = false; setQueue(linkLabels.map((label,i) => ({rec:"L"+i, label})));
+  qmsg(linkLabels.length > 1 ? `${linkLabels.length} labels. Click a label to skip it, then press Print.` : "Label ready.");
+  $("qrefresh").classList.add("is-hidden");
+  render();
+  // One label from a sample's button: print straight away.
+  if(linkLabels.length === 1 && HP.get("auto") !== "0")
+    (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => { render(); setTimeout(doPrint, 400); });
+}else{
+  render(); loadQueue();
 }
 </script>
 </body>
