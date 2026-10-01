@@ -292,7 +292,8 @@ details.fg[open]>summary::after{transform:rotate(-135deg)}
     </div>
     <div class="qbar is-hidden" id="keybar">
       <span style="flex:1;min-width:220px">Paste your Airtable personal access token. It is saved only in this browser on this computer.</span>
-      <input id="keyin" class="inp" type="password" placeholder="pat..." style="width:260px" autocomplete="off">
+      <input id="keyin" class="inp" type="text" placeholder="Click here, then Cmd+V" style="width:280px;font-family:monospace" autocomplete="off" spellcheck="false" autocapitalize="off">
+      <button class="btn" id="keypaste" type="button">Paste from clipboard</button>
       <button class="btn primary" id="keysave" type="button">Save</button>
       <button class="btn" id="keyforget" type="button">Forget key</button>
     </div>
@@ -763,6 +764,11 @@ let fromApi = false;
 const API = `https://api.airtable.com/v0/${AT.base}/${AT.table}`;
 function showKeybar(on){ $("keybar").classList.toggle("is-hidden", !on); if(on) $("keyin").focus(); }
 $("qkey").addEventListener("click", () => showKeybar($("keybar").classList.contains("is-hidden")));
+$("keypaste").addEventListener("click", async () => {
+  try{ const t = (await navigator.clipboard.readText()).trim(); if(t){ $("keyin").value = t; qmsg(t.startsWith("pat") ? "Key pasted. Press Save." : "Pasted, but it doesn't start with \"pat\". Copy the token again from Airtable."); } else qmsg("The clipboard is empty. Copy the token in Airtable first."); }
+  catch(e){ qmsg("Chrome blocked reading the clipboard. Click the box and press Cmd+V (or right-click, Paste)."); $("keyin").focus(); }
+});
+$("keyin").addEventListener("keydown", e => { if(e.key === "Enter") $("keysave").click(); });
 $("keysave").addEventListener("click", () => { const v = $("keyin").value.trim(); if(!v) return; try{ localStorage.setItem(KEY, v); }catch(e){} $("keyin").value = ""; showKeybar(false); loadQueue(); });
 $("keyforget").addEventListener("click", () => { try{ localStorage.removeItem(KEY); }catch(e){} showKeybar(false); queue = []; picked.clear(); qmsg("Key removed from this browser."); render(); });
 
