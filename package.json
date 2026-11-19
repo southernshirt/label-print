@@ -1,0 +1,11 @@
+{
+  "name": "label-print",
+  "private": true,
+  "type": "module",
+  "description": "SSCO Sample Label Studio: prints Brother QL-820NWB and badge labels from the Airtable print queue.",
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "node build.mjs --check",
+    "test": "node test/run.mjs"
+  }
+}
