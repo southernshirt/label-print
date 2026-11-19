@@ -1,0 +1,10 @@
+# Cloudflare Worker config for the label-print proxy. NOT deployed yet (see worker/README.md).
+# Secrets are never stored here. Set them with:
+#   npx wrangler secret put AIRTABLE_TOKEN     (required)
+#   npx wrangler secret put TEAM_CODE          (optional team passcode)
+name = "ssco-label-proxy"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+ALLOWED_ORIGINS = "https://southernshirt.github.io"
