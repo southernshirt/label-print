@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sample Label Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@400;700&family=Oswald:wght@400;700&family=Roboto+Condensed:wght@400;700&family=Roboto+Mono:wght@400;700&family=Libre+Baskerville:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<style>
+/*@include styles.css*/
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="brand"><b>Sample Label Studio</b><span>Brother QL-820NWB and Uline badge inserts</span></div>
+  <div class="tplwrap">
+    <label for="tpl">Template</label>
+    <select id="tpl" class="sel" style="width:200px"><option value="">Custom (not saved)</option></select>
+  </div>
+  <button class="btn" id="saveOpen" type="button">Save template</button>
+  <button class="btn primary" id="print" type="button">Print</button>
+</header>
+
+<div id="saveBar" class="bar is-hidden" style="top:auto;position:relative">
+  <label for="tplName" style="color:var(--muted);font-size:12px">Template name</label>
+  <input id="tplName" class="inp" type="text" placeholder="e.g. Hangtag 1.1 × 2.4 QR left" maxlength="60" style="flex:1;min-width:200px">
+  <button class="btn primary" id="save" type="button">Save template</button>
+  <button class="btn is-hidden" id="del" type="button">Delete template</button>
+  <span id="saveMsg" style="color:var(--muted);font-size:12px"></span>
+</div>
+
+<main class="app">
+  <aside class="side controls" aria-label="Label settings">
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="t-paper" aria-selected="true" aria-controls="p-paper">Paper</button>
+      <button class="tab" role="tab" id="t-layout" aria-selected="false" aria-controls="p-layout">Layout</button>
+      <button class="tab" role="tab" id="t-content" aria-selected="false" aria-controls="p-content">Content</button>
+    </div>
+
+    <!-- PAPER -->
+    <section class="pane" role="tabpanel" id="p-paper" aria-labelledby="t-paper">
+      <div class="sec">
+        <h3>Print on</h3>
+        <div class="seg" role="group" aria-label="Print on">
+          <button type="button" id="m-brother" aria-pressed="true">Brother label roll</button>
+          <button type="button" id="m-badge" aria-pressed="false">Uline badge insert</button>
+        </div>
+      </div>
+
+      <div class="sec" id="brotherBox">
+        <label class="lbl" for="roll">Label roll</label>
+        <select id="roll" class="sel full"></select>
+        <div id="lenBox" class="is-hidden">
+          <label class="lbl">Label length</label>
+          <div class="seg" role="group" aria-label="Label length">
+            <button type="button" id="len-auto" aria-pressed="true">Fit to content</button>
+            <button type="button" id="len-fixed" aria-pressed="false">Set length</button>
+          </div>
+          <div id="lenFixedBox" class="is-hidden">
+            <label class="lbl" for="len">Length (inches)</label>
+            <input id="len" class="inp full" type="number" min="1" max="39" step="0.1" value="2.5">
+          </div>
+          <p class="note" id="lenTip"></p>
+        </div>
+        <label class="lbl">Orientation</label>
+        <div class="seg" role="group" aria-label="Orientation">
+          <button type="button" id="o-land" aria-pressed="true">Landscape</button>
+          <button type="button" id="o-port" aria-pressed="false">Portrait</button>
+        </div>
+      </div>
+
+      <div class="sec is-hidden" id="badgeBox">
+        <label class="lbl" for="badge">Badge size (fits Uline badge holders)</label>
+        <select id="badge" class="sel full"></select>
+        <label class="lbl">Print as</label>
+        <div class="seg" role="group" aria-label="Print as">
+          <button type="button" id="b-tile" aria-pressed="true">Letter sheet, cut lines</button>
+          <button type="button" id="b-single" aria-pressed="false">One per page</button>
+        </div>
+        <p class="note" id="badgeTip"></p>
+      </div>
+    </section>
+
+    <!-- LAYOUT -->
+    <section class="pane is-hidden" role="tabpanel" id="p-layout" aria-labelledby="t-layout">
+      <div class="sec">
+        <h3>Start from a layout</h3>
+        <div class="presets" id="presets"></div>
+      </div>
+      <div class="sec">
+        <h3>QR code</h3>
+        <div class="chk"><input type="checkbox" id="qr-on" checked><label for="qr-on">Print QR code</label></div>
+        <div id="qrBox">
+          <div class="two">
+            <div><label class="lbl" for="qr-pos">Position</label>
+              <select id="qr-pos" class="sel full"><option value="qr-left">Left</option><option value="qr-right">Right</option><option value="qr-top">Top</option></select></div>
+            <div><label class="lbl" for="qr-size">Size</label><input id="qr-size" type="range" min="25" max="100" value="55"></div>
+          </div>
+          <div class="chk"><input type="checkbox" id="qr-id" checked><label for="qr-id">Sample ID under QR</label></div>
+          <p class="note" id="qrTip"></p>
+        </div>
+      </div>
+      <div class="sec">
+        <h3>Text style</h3>
+        <label class="lbl" for="font">Font</label>
+        <select id="font" class="sel full">
+          <option value="Helvetica, Arial, sans-serif">Helvetica / Arial</option>
+          <option value="Inter, Helvetica, Arial, sans-serif">Inter</option>
+          <option value="Montserrat, Helvetica, Arial, sans-serif">Montserrat</option>
+          <option value="'Roboto Condensed', 'Arial Narrow', Arial, sans-serif">Roboto Condensed</option>
+          <option value="Oswald, 'Arial Narrow', Arial, sans-serif">Oswald</option>
+          <option value="'Libre Baskerville', Georgia, serif">Libre Baskerville</option>
+          <option value="Georgia, 'Times New Roman', serif">Georgia</option>
+          <option value="'Roboto Mono', 'Courier New', monospace">Roboto Mono</option>
+        </select>
+        <div class="two">
+          <div><label class="lbl" for="align">Alignment</label>
+            <select id="align" class="sel full"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div>
+          <div id="scaleBox"><label class="lbl" for="scale">Scale all text</label><input id="scale" type="range" min="60" max="200" value="100"></div>
+        </div>
+        <label class="lbl" for="nameMode">Item name</label>
+        <select id="nameMode" class="sel full"><option value="top">Across the top, full width</option><option value="inline">With the other details</option></select>
+        <div class="chk"><input type="checkbox" id="autofit"><label for="autofit">Auto-fit text to the label</label></div>
+        <p class="note" id="fitTip"></p>
+        <p class="note">The QL-820NWB prints black, and red only on DK-2251 black/red rolls. Badge inserts print in any color on a regular printer.</p>
+      </div>
+    </section>
+
+    <!-- CONTENT -->
+    <section class="pane is-hidden" role="tabpanel" id="p-content" aria-labelledby="t-content">
+      <p class="note" style="margin:0 0 12px">Open a group and tick what to show. Each field has its own size, bold, italic, and color.</p>
+      <div id="groups"></div>
+    </section>
+  </aside>
+
+  <section class="stage" aria-label="Preview">
+    <div class="stagebar">
+      <span class="dims" id="dims"></span>
+      <span class="count" id="count"></span>
+      <div class="zoom">Zoom
+        <div class="seg" role="group" aria-label="Zoom">
+          <button type="button" data-z="1" aria-pressed="false">100%</button>
+          <button type="button" data-z="1.5" aria-pressed="true">150%</button>
+          <button type="button" data-z="2" aria-pressed="false">200%</button>
+        </div>
+      </div>
+    </div>
+    <div class="qbar" id="qbar">
+      <span id="qmsg">Checking the Airtable print queue…</span>
+      <span class="qact">
+        <button class="btn" id="qall" type="button">Select all</button>
+        <button class="btn" id="qnone" type="button">Select none</button>
+        <button class="btn" id="qrefresh" type="button">Refresh queue</button>
+        <button class="btn" id="qkey" type="button">Airtable key</button>
+        <button class="btn is-hidden" id="qclear" type="button">Clear printed labels from queue</button>
+      </span>
+    </div>
+    <div class="qbar is-hidden" id="keybar">
+      <span style="flex:1;min-width:220px">Paste your Airtable personal access token. It is saved only in this browser on this computer.</span>
+      <input id="keyin" class="inp" type="text" placeholder="Click here, then Cmd+V" style="width:280px;font-family:monospace" autocomplete="off" spellcheck="false" autocapitalize="off">
+      <button class="btn" id="keypaste" type="button">Paste from clipboard</button>
+      <button class="btn primary" id="keysave" type="button">Save</button>
+      <button class="btn" id="keyforget" type="button">Forget key</button>
+    </div>
+    <p class="warn" id="warn" role="status"></p>
+    <div class="desk"><div class="sheet" id="sheet"></div></div>
+  </section>
+</main>
+
+<script>
+//@include js/01-config.js
+//@include js/02-controls.js
+//@include js/03-data.js
+//@include js/04-render.js
+//@include js/05-wireup.js
+//@include js/06-standalone.js
+</script>
+</body>
+</html>

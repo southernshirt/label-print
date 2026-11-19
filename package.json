@@ -1,0 +1,15 @@
+{
+  "name": "label-print",
+  "private": true,
+  "description": "Sample Label Studio: prints Brother QL-820NWB labels for the Lemonade Stand Inventory Airtable base.",
+  "scripts": {
+    "build": "python3 build.py",
+    "check": "python3 build.py --check",
+    "test": "python3 build.py --check && node tests/smoke.test.mjs && node worker/worker.test.mjs",
+    "test:worker": "node worker/worker.test.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.48.0",
+    "qrcodejs": "1.0.0"
+  }
+}
